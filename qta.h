@@ -8,5 +8,7 @@
 
 #include <vector>
 #include <map>
-std::map<double, double> make_cdf( std::vector<double> latencies);
+
+std::map<double, double> make_cdf(std::vector<double> latencies);
+
 #endif //QED_SAMPLER_QTA_H

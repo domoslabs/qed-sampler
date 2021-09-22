@@ -8,5 +8,8 @@
 #include <vector>
 #include <string>
 
-std::vector<double> read_csv_column(const std::string& file, int col_idx);
+std::vector<double> read_csv_column(std::stringstream data, int col_idx);
+
+std::string exec(const char *cmd);
+
 #endif //QED_SAMPLER_IO_H
