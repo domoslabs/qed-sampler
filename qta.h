@@ -8,7 +8,13 @@
 
 #include <vector>
 #include <map>
-
-std::map<double, double> make_cdf(std::vector<double> latencies);
+struct Sample{
+    double rtt = 0;
+    double intd = 0;
+    double fwd = 0;
+    double swd = 0;
+    int plen = 0;
+};
+std::map<double, double> make_cdf(std::vector<Sample>& samples);
 
 #endif //QED_SAMPLER_QTA_H

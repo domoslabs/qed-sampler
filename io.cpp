@@ -7,29 +7,9 @@
 #include <array>
 #include <memory>
 #include <iostream>
+#include <iterator>
 #include "io.h"
 
-std::vector<double> read_csv_column(std::stringstream data, int col_idx) {
-    std::vector<double> result;
-    std::string line;
-    // Skip first line
-    std::getline(data, line);
-    while (std::getline(data, line)) {
-        std::istringstream iss(line);
-
-        int count = 0;
-        while (iss.good()) {
-            std::string substr;
-            getline(iss, substr, ',');
-            if (count == col_idx) {
-                result.push_back(std::stod(substr));
-            }
-            count++;
-        }
-    }
-
-    return result;
-}
 
 /**
  * https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
