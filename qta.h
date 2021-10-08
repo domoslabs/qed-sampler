@@ -13,7 +13,7 @@ struct Sample{
     double intd = 0;
     double fwd = 0;
     double swd = 0;
-    int plen = 0;
+    double plen = 0;
 };
 std::map<double, double> make_cdf(std::vector<Sample>& samples);
 
