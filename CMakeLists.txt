@@ -12,6 +12,6 @@ else (${jsoncpp_FOUND})
 endif (${jsoncpp_FOUND})
 
 
-add_executable(qed_sampler main.cpp qta.cpp qta.h io.cpp io.h CLI11.hpp)
+add_executable(qed_sampler main.cpp qta.h io.h CLI11.hpp)
 target_link_libraries(qed_sampler ${JSONCPP_LIBRARIES} jsoncpp)
 target_include_directories(qed_sampler PUBLIC ${JSONCPP_INCLUDE_DIRS})
