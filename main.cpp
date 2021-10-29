@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
     payloads.push_back(1400);
 
     CLI::App app{"Description"}; // TODO
-    app.get_formatter()->column_width(100);
+    app.get_formatter()->column_width(75);
     app.option_defaults()->always_capture_default(true);
     auto opt_address = app.add_option("address", address, "IPv4 address of a running TWAMP Server.");
     auto opt_port = app.add_option("-p, --port", port, "The port of the TWAMP Server.");
@@ -63,7 +63,8 @@ int main(int argc, char **argv) {
                    "Use a pre-obtained CDF instead of sampling. Expects a JSON with the same \"CDF\"-item as the output of this program. Disables decomposition. Needs a QTA file.")->excludes(
             opt_address, opt_amount, opt_port, opt_payloads)->needs(opt_qta);
     app.add_option("--precision", precision, "Numerical precision in the output.")->check(CLI::Range((uint16_t)2, (uint16_t)16));
-    auto opt_verbose = app.add_flag("-v, --verbose", "Enable verbose output. The twamp output is as follows: Time,IP,Snd#,Rcv#,SndPort,RscPort,Sync,FW_TTL,SW_TTL,SndTOS,FW_TOS,SW_TOS,RTT,IntD,FWD,BWD,PLEN,LOSS");
+    auto opt_verbose = app.add_flag("-v, --verbose", "Enable verbose output.");
+    auto opt_comments = app.add_flag("--comments", "Enable comments in the json output.");
 
     CLI11_PARSE(app, argc, argv);
     Json::Value root;
@@ -132,12 +133,14 @@ int main(int argc, char **argv) {
         root["cdf_qta_overlap"] = cdf_qta_overlap(cdf, qta);
     }
 
+    if(*opt_comments){
+        root["CDF"].setComment(std::string("// Normalized CDF consisting of latency-percentile pairs. When plotting, latency is x and percentile [0, 1] is y."), Json::commentBefore);
+        root["cdf_qta_overlap"].setComment(std::string("// The area overlap between the CDF and the provided QTA. >0 if there is an overlap."), Json::commentBefore);
+        root["decomposition"]["intercept"].setComment(std::string("// The intercept of the slope found by linear regression through the min value of each packet size."), Json::commentBefore);
+        root["decomposition"]["slope"].setComment(std::string("// The slope found by linear regression through the min value of each packet size."), Json::commentBefore);
+        root["decomposition"]["values"].setComment(std::string("//Array of G(eographic)-, S(erialization)-, and V(ariable contention)-delays for each packet size. V is a distribution."), Json::commentBefore);
+    }
 
-    root["CDF"].setComment(std::string("// Normalized CDF consisting of latency-percentile pairs. When plotting, latency is x and percentile [0, 1] is y."), Json::commentBefore);
-    root["cdf_qta_overlap"].setComment(std::string("// The area overlap between the CDF and the provided QTA. >0 if there is an overlap."), Json::commentBefore);
-    root["decomposition"]["intercept"].setComment(std::string("// The intercept of the slope found by linear regression through the min value of each packet size."), Json::commentBefore);
-    root["decomposition"]["slope"].setComment(std::string("// The slope found by linear regression through the min value of each packet size."), Json::commentBefore);
-    root["decomposition"]["values"].setComment(std::string("//Array of G(eographic)-, S(erialization)-, and V(ariable contention)-delays for each packet size. V is a distribution."), Json::commentBefore);
     //------------------ Output ---------------
     std::stringstream outs;
     Json::StreamWriterBuilder wbuilder;
