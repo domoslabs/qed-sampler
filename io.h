@@ -80,13 +80,15 @@ Json::Value stringToJson(const std::string &s) {
  * @param cmd Command to execute
  * @return Output of the command
  */
-std::string exec(const char *cmd) {
+std::string exec(const char *cmd, bool verbose=false) {
     char buffer[128];
     std::string result;
     FILE *pipe = popen(cmd, "r");
     if (!pipe) throw std::runtime_error("popen() failed!");
     try {
         while (fgets(buffer, sizeof buffer, pipe) != nullptr) {
+            if(verbose)
+                std::cout << buffer <<std::flush;
             result += buffer;
         }
     } catch (...) {

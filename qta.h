@@ -12,7 +12,7 @@
 #include <numeric>
 #include <complex>
 
-#define MAXLATENCY 15000
+#define MAXLATENCY 15000.0
 struct Sample {
     double rtt = 0;
     double intd = 0;
@@ -20,18 +20,24 @@ struct Sample {
     double swd = 0;
     double plen = 0;
 };
-
-std::map<double, double> make_cdf(std::vector<double> &rtts, std::vector<double> *percentiles = nullptr) {
+std::map<double, double> make_cdf(std::vector<double>& rtts, uint32_t num_losses, std::vector<double> *percentiles = nullptr) {
+    // Make a copy so that we can modify the array without messing up somewhere else
+    std::vector<double> _rtts = std::vector<double>(rtts);
     std::map<double, double> cdf;
-    std::sort(rtts.begin(), rtts.end(), [](double a, double b) {
+    // Add packet losses as MAX_LATENCY
+    for(int i = 0; i < num_losses; i++){
+        _rtts.push_back(MAXLATENCY);
+    }
+    std::sort(_rtts.begin(), _rtts.end(), [](double a, double b) {
         return a < b;
     });
-    for (int i = 0; i < rtts.size(); ++i) {
-        double latency = rtts.at(i);
+    for (int i = 0; i < _rtts.size(); ++i) {
+        // Make sure that we cap the latency at MAXLATENCY
+        double latency = std::min(_rtts.at(i), MAXLATENCY);
         if (percentiles) {
             cdf[latency] = percentiles->at(i);
         } else {
-            cdf[latency] = (i + 1.0) / (double) rtts.size();
+            cdf[latency] = (i + 1.0) / (double) _rtts.size();
         }
 
     }
@@ -157,7 +163,6 @@ Distribution getV(AnalysisResult ar, double payload_size, LinearFitResult<double
     nth_element(_tmp.begin(), _tmp.begin()+n, _tmp.end());
     double median = _tmp[n];
 
-
     V.max = ar.maxDelays.at(index)-slopeHeight;
     V.min = ar.minDelays.at(index)-slopeHeight;
     V.mean = mean;
@@ -165,9 +170,7 @@ Distribution getV(AnalysisResult ar, double payload_size, LinearFitResult<double
     V.median = median;
     return V;
 }
-double getS(AnalysisResult ar, double payload_size, double G, LinearFitResult<double> fr) {
-    auto it = std::find(ar.payload_sizes.begin(), ar.payload_sizes.end(), payload_size);
-    auto index = std::distance(ar.payload_sizes.begin(), it);
+double getS(double payload_size, double G, LinearFitResult<double> fr) {
     double slopeHeight = fr.intercept + fr.slope * payload_size;
     double S = slopeHeight-G;
     return S;
