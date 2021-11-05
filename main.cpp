@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     payloads.push_back(1200);
     payloads.push_back(1400);
 
-    CLI::App app{"Description"}; // TODO
+    CLI::App app{"QED Sampling application."}; // TODO
     app.get_formatter()->column_width(75);
     app.option_defaults()->always_capture_default(true);
     auto opt_address = app.add_option("address", address, "IPv4 address of a running TWAMP Server.");
