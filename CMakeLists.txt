@@ -4,6 +4,7 @@ project(qed-sampler)
 set(CMAKE_CXX_STANDARD 11)
 find_package(PkgConfig)
 
+
 if (${jsoncpp_FOUND})
     MESSAGE(STATUS "jsoncpp found via CMake")
 else (${jsoncpp_FOUND})
@@ -12,8 +13,11 @@ else (${jsoncpp_FOUND})
 endif (${jsoncpp_FOUND})
 
 
+find_library(LIBTDIGEST libtdigest.so)
+
 add_executable(qed-sampler main.cpp qta.h io.h CLI11.hpp)
 target_link_libraries(qed-sampler ${JSONCPP_LIBRARIES} jsoncpp)
+target_link_libraries(qed-sampler ${LIBTDIGEST})
 target_include_directories(qed-sampler PUBLIC ${JSONCPP_INCLUDE_DIRS})
 
 install(TARGETS qed-sampler)

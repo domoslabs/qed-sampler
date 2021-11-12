@@ -3,7 +3,7 @@
 #include "io.h"
 #include "CLI11.hpp"
 #include "json/json.h"
-
+#include "tdigest.h"
 /**
  * Decomposition is based on: https://www.martingeddes.com/think-tank/network-performance-chemistry/
  */
@@ -84,15 +84,13 @@ int main(int argc, char **argv) {
         if(*opt_verbose)
             std::cout << command.str() << std::endl;
         std::string cmd_out = exec(command.str().c_str(), (bool)*opt_verbose);
-        if(*opt_verbose)
-            std::cout << cmd_out << std::endl;
         rtts = read_csv_column<double>(std::stringstream(cmd_out), 12);
         auto intds = read_csv_column<double>(std::stringstream(cmd_out), 13);
         auto fwds = read_csv_column<double>(std::stringstream(cmd_out), 14);
         auto swds = read_csv_column<double>(std::stringstream(cmd_out), 15);
         auto plens = read_csv_column<double>(std::stringstream(cmd_out), 16);
         // We only look at the last line of the losses column
-        num_losses = *read_csv_column<uint32_t>(std::stringstream(cmd_out), 17).end();
+        num_losses = read_csv_column<uint32_t>(std::stringstream(cmd_out), 17).back();
         root["loss_pct"] = (double)num_losses/(double)rtts.size();
         std::vector<Sample> samples = std::vector<Sample>();
         for (int i = 0; i < rtts.size(); i++) {
@@ -104,16 +102,16 @@ int main(int argc, char **argv) {
             sample.plen = plens.at(i);
             samples.push_back(sample);
         }
+
         performDecomposition(samples, payloads, root);
-        cdf = make_cdf(rtts, num_losses);
+        cdf = make_cdf_t(rtts, num_losses);
     } else {
         auto cdf_data = read_file(cdf_path);
         Json::Value cdf_json_root = stringToJson(cdf_data);
         auto cdf_rtts = fromJsonVector<double>(cdf_json_root["CDF"]["latencies"]);
         auto cdf_percentiles = fromJsonVector<double>(cdf_json_root["CDF"]["percentiles"]);
-        cdf = make_cdf(cdf_rtts, num_losses, &cdf_percentiles);
+        cdf = make_cdf_t(cdf_rtts, num_losses, &cdf_percentiles);
     }
-
     auto json_latency_arr = Json::Value(Json::arrayValue);
     auto json_percentile_arr = Json::Value(Json::arrayValue);
     for (auto cdf_point: cdf) {

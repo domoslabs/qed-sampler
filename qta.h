@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <numeric>
 #include <complex>
-
+#include "tdigest.h"
 #define MAXLATENCY 15000.0
 struct Sample {
     double rtt = 0;
@@ -43,7 +43,37 @@ std::map<double, double> make_cdf(std::vector<double>& rtts, uint32_t num_losses
     }
     return cdf;
 }
-
+std::map<double, double> make_cdf_t(std::vector<double>& rtts, uint32_t num_losses, std::vector<double> *percentiles = nullptr) {
+    // Make a copy so that we can modify the array without messing up somewhere else
+    std::vector<double> _rtts = std::vector<double>(rtts);
+    std::map<double, double> cdf;
+    // Add packet losses as MAX_LATENCY
+    for(int i = 0; i < num_losses; i++){
+        _rtts.push_back(MAXLATENCY);
+    }
+    auto td = td_new(100);
+    // Feed the rtts to tdigest.
+    for (int i = 0; i < _rtts.size(); ++i) {
+        // Make sure that we cap the latency at MAXLATENCY
+        double latency = std::min(_rtts.at(i), MAXLATENCY);
+        td_add(td, latency, 1);
+    }
+    // Works weird if not calling "compress" implicitly.
+    td_compress(td);
+    // Add the fewer values to cdf output
+    int td_len = td_centroid_count(td);
+    double weights = 0;
+    for(int i = 0; i < td_len; i++){
+        weights+= td_centroids_weight_at(td, i);
+        auto latency = td_centroids_mean_at(td, i);
+        if (percentiles) {
+            cdf[latency] = percentiles->at(i);
+        } else {
+            cdf[latency] = weights / td_size(td);
+        }
+    }
+    return cdf;
+}
 /**
  * Bjorn Ivar's code ported to C++
  */
@@ -100,7 +130,8 @@ double area_part(std::pair<const double, double> cdf_point1, std::pair<const dou
 }
 
 double cdf_qta_overlap(std::map<double, double> cdf, std::map<double, double> qta) {
-    // Adding MAXLATENCY makes the math easier...
+    // Bjorn Olav's code mentions that cdfs always have a max latency entry (in the old code),
+    // so I am adding it here just in case it breaks the math or something...
     qta[MAXLATENCY] = 1.0;
     cdf[MAXLATENCY] = 1.0;
     double area = 0;
