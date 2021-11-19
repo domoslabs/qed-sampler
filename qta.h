@@ -178,7 +178,7 @@ Distribution getV(AnalysisResult ar, double payload_size, LinearFitResult<double
     auto it = std::find(ar.payload_sizes.begin(), ar.payload_sizes.end(), payload_size);
     auto index = std::distance(ar.payload_sizes.begin(), it);
     double slopeHeight = fr.intercept + fr.slope * payload_size;
-    std::vector<double> residuals;
+    std::vector<double> residuals = std::vector<double>();
     for(auto delay : ar.delays[payload_size]){
         residuals.push_back(delay-slopeHeight);
     }

@@ -7,23 +7,27 @@
 /**
  * Decomposition is based on: https://www.martingeddes.com/think-tank/network-performance-chemistry/
  */
- void performDecomposition(const std::vector<Sample>& samples, const std::vector<uint16_t>& payloads, Json::Value& root){
+ void performDecomposition(const std::vector<Sample>& samples, const std::vector<uint16_t>& payloads, const std::vector<double> plens, Json::Value& root){
     auto ar = analyzeSamples(samples, payloads);
     auto fr = GetLinearFit(ar.payload_sizes, ar.minDelays);
-
+    int position = 0;
     for (int i = 0; i < payloads.size(); i++) {
+        if(std::find(plens.begin(), plens.end(), payloads.at(i)) == plens.end()){
+            continue;
+        }
         int payload_size = payloads.at(i);
         double G = fr.intercept;
         Distribution V = getV(ar, payload_size, fr);
         double S = getS(payload_size, G, fr);
-        root["decomposition"]["values"][i]["payload_size"] = payload_size;
-        root["decomposition"]["values"][i]["G"] = G;
-        root["decomposition"]["values"][i]["V"]["mean"] = V.mean;
-        root["decomposition"]["values"][i]["V"]["std"] = V.stdev;
-        root["decomposition"]["values"][i]["V"]["median"] = V.median;
-        root["decomposition"]["values"][i]["V"]["min"] = V.min;
-        root["decomposition"]["values"][i]["V"]["max"] = V.max;
-        root["decomposition"]["values"][i]["S"] = S;
+        root["decomposition"]["values"][position]["payload_size"] = payload_size;
+        root["decomposition"]["values"][position]["G"] = G;
+        root["decomposition"]["values"][position]["V"]["mean"] = V.mean;
+        root["decomposition"]["values"][position]["V"]["std"] = V.stdev;
+        root["decomposition"]["values"][position]["V"]["median"] = V.median;
+        root["decomposition"]["values"][position]["V"]["min"] = V.min;
+        root["decomposition"]["values"][position]["V"]["max"] = V.max;
+        root["decomposition"]["values"][position]["S"] = S;
+        position++;
     }
     root["decomposition"]["slope"] = fr.slope;
     root["decomposition"]["intercept"] = fr.intercept;
@@ -73,8 +77,6 @@ int main(int argc, char **argv) {
     std::map<double, double> cdf;
     if (cdf_path.empty()) {
         std::stringstream command;
-        if(*opt_verbose)
-            command << "stdbuf --output=L "; // To force the twamp output to be line-buffered
         command << "twamp-light-client " << address << " ";
         command << "-n " << n << " ";
         command << "-p " << std::to_string(port) << " ";
@@ -103,7 +105,7 @@ int main(int argc, char **argv) {
             samples.push_back(sample);
         }
 
-        performDecomposition(samples, payloads, root);
+        performDecomposition(samples, payloads, plens, root);
         cdf = make_cdf_t(rtts, num_losses);
     } else {
         auto cdf_data = read_file(cdf_path);
