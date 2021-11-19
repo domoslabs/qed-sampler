@@ -1,7 +1,7 @@
 #include <iostream>
-#include "qta.h"
-#include "io.h"
-#include "CLI11.hpp"
+#include "../include/qta.h"
+#include "../include/io.h"
+#include "../include/CLI11.hpp"
 #include "json/json.h"
 #include "tdigest.h"
 /**
