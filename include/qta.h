@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <numeric>
 #include <complex>
+#include <json/json.h>
 #include "tdigest.h"
 #define MAXLATENCY 15000.0
 struct Sample {
@@ -260,5 +261,32 @@ LinearFitResult<T> GetLinearFit(const std::vector<T> &x, const std::vector<T> &y
     out.intercept = intercept;
     return out;
 }
-
+/**
+ * Decomposition is based on: https://www.martingeddes.com/think-tank/network-performance-chemistry/
+ */
+void performDecomposition(const std::vector<Sample>& samples, const std::vector<uint16_t>& payloads, const std::vector<double> plens, Json::Value& root){
+    auto ar = analyzeSamples(samples, payloads);
+    auto fr = GetLinearFit(ar.payload_sizes, ar.minDelays);
+    int position = 0;
+    for (int i = 0; i < payloads.size(); i++) {
+        if(std::find(plens.begin(), plens.end(), payloads.at(i)) == plens.end()){
+            continue;
+        }
+        int payload_size = payloads.at(i);
+        double G = fr.intercept;
+        Distribution V = getV(ar, payload_size, fr);
+        double S = getS(payload_size, G, fr);
+        root["decomposition"]["values"][position]["payload_size"] = payload_size;
+        root["decomposition"]["values"][position]["G"] = G;
+        root["decomposition"]["values"][position]["V"]["mean"] = V.mean;
+        root["decomposition"]["values"][position]["V"]["std"] = V.stdev;
+        root["decomposition"]["values"][position]["V"]["median"] = V.median;
+        root["decomposition"]["values"][position]["V"]["min"] = V.min;
+        root["decomposition"]["values"][position]["V"]["max"] = V.max;
+        root["decomposition"]["values"][position]["S"] = S;
+        position++;
+    }
+    root["decomposition"]["slope"] = fr.slope;
+    root["decomposition"]["intercept"] = fr.intercept;
+}
 #endif //QED_SAMPLER_QTA_H

@@ -2,37 +2,9 @@
 #include "../include/qta.h"
 #include "../include/io.h"
 #include "../include/CLI11.hpp"
-#include "json/json.h"
-#include "tdigest.h"
-/**
- * Decomposition is based on: https://www.martingeddes.com/think-tank/network-performance-chemistry/
- */
- void performDecomposition(const std::vector<Sample>& samples, const std::vector<uint16_t>& payloads, const std::vector<double> plens, Json::Value& root){
-    auto ar = analyzeSamples(samples, payloads);
-    auto fr = GetLinearFit(ar.payload_sizes, ar.minDelays);
-    int position = 0;
-    for (int i = 0; i < payloads.size(); i++) {
-        if(std::find(plens.begin(), plens.end(), payloads.at(i)) == plens.end()){
-            continue;
-        }
-        int payload_size = payloads.at(i);
-        double G = fr.intercept;
-        Distribution V = getV(ar, payload_size, fr);
-        double S = getS(payload_size, G, fr);
-        root["decomposition"]["values"][position]["payload_size"] = payload_size;
-        root["decomposition"]["values"][position]["G"] = G;
-        root["decomposition"]["values"][position]["V"]["mean"] = V.mean;
-        root["decomposition"]["values"][position]["V"]["std"] = V.stdev;
-        root["decomposition"]["values"][position]["V"]["median"] = V.median;
-        root["decomposition"]["values"][position]["V"]["min"] = V.min;
-        root["decomposition"]["values"][position]["V"]["max"] = V.max;
-        root["decomposition"]["values"][position]["S"] = S;
-        position++;
-    }
-    root["decomposition"]["slope"] = fr.slope;
-    root["decomposition"]["intercept"] = fr.intercept;
- }
+
 int main(int argc, char **argv) {
+    // ---------------------Command Line Arguments---------------------
     std::string address = "127.0.0.1";
     std::string qta_path, cdf_path;
     uint16_t port = 443;
@@ -58,19 +30,19 @@ int main(int argc, char **argv) {
     auto opt_amount = app.add_option("-n, --amount", n, "Number of samples to collect.");
     app.add_option("-d, --delay", delay, "Delay between samples (ms)");
     app.add_option("-P, --local_port", localPort, "Local port to run on.");
-    auto opt_payloads = app.add_option<std::vector<uint16_t>>("-l, --payloads", payloads,
-                                                              "Payload size(s) defined in bytes.")->default_str(
-            vectorToString(payloads));
-    auto opt_qta = app.add_option("--qta", qta_path,
-                                  "Calculate the CDF-QTA overlap, requires path to a QTA-file. Expects a JSON with the same \"CDF\"-item as the output of this program.");
-    app.add_option("--cdf", cdf_path,
-                   "Use a pre-obtained CDF instead of sampling. Expects a JSON with the same \"CDF\"-item as the output of this program. Disables decomposition. Needs a QTA file.")->excludes(
-            opt_address, opt_amount, opt_port, opt_payloads)->needs(opt_qta);
-    app.add_option("--precision", precision, "Numerical precision in the output.")->check(CLI::Range((uint16_t)2, (uint16_t)16));
+    auto opt_payloads = app.add_option<std::vector<uint16_t>>("-l, --payloads", payloads,"Payload size(s) defined in bytes.")->default_str(vectorToString(payloads));
+    auto opt_qta = app.add_option("--qta", qta_path,"Calculate the CDF-QTA overlap, requires path to a QTA-file. Expects a JSON with the same \"CDF\"-item as the output of this program.");
+    app.add_option("--cdf", cdf_path,"Use a pre-obtained CDF instead of sampling. Expects a JSON with the same \"CDF\"-item as the output of this program. Disables decomposition. Needs a QTA file.")->excludes(opt_address, opt_amount, opt_port, opt_payloads)->needs(opt_qta);
+    app.add_option("--precision", precision, "Numerical precision in the output.")->check(CLI::Range((uint16_t) 2, (uint16_t) 16));
     auto opt_verbose = app.add_flag("-v, --verbose", "Enable verbose output.");
     auto opt_comments = app.add_flag("--comments", "Enable comments in the json output.");
 
     CLI11_PARSE(app, argc, argv);
+    if(payloads.size() < 2){
+        std::cerr << "Must provide at least 2 payload sizes." << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    // ---------------------Program---------------------
     Json::Value root;
     std::vector<double> rtts;
     uint32_t num_losses = 0;
@@ -83,9 +55,9 @@ int main(int argc, char **argv) {
         command << "-d " << std::to_string(delay) << " ";
         command << "-P " << std::to_string(localPort) << " ";
         command << "-l " << vectorToString(payloads, " ");
-        if(*opt_verbose)
+        if (*opt_verbose)
             std::cout << command.str() << std::endl;
-        std::string cmd_out = exec(command.str().c_str(), (bool)*opt_verbose);
+        std::string cmd_out = exec(command.str().c_str(), (bool) *opt_verbose);
         rtts = read_csv_column<double>(std::stringstream(cmd_out), 12);
         auto intds = read_csv_column<double>(std::stringstream(cmd_out), 13);
         auto fwds = read_csv_column<double>(std::stringstream(cmd_out), 14);
@@ -93,7 +65,7 @@ int main(int argc, char **argv) {
         auto plens = read_csv_column<double>(std::stringstream(cmd_out), 16);
         // We only look at the last line of the losses column
         num_losses = read_csv_column<uint32_t>(std::stringstream(cmd_out), 17).back();
-        root["loss_pct"] = (double)num_losses/(double)rtts.size();
+        root["loss_pct"] = (double) num_losses / (double) rtts.size();
         std::vector<Sample> samples = std::vector<Sample>();
         for (int i = 0; i < rtts.size(); i++) {
             Sample sample;
@@ -110,9 +82,9 @@ int main(int argc, char **argv) {
     } else {
         auto cdf_data = read_file(cdf_path);
         Json::Value cdf_json_root = stringToJson(cdf_data);
-        auto cdf_rtts = fromJsonVector<double>(cdf_json_root["CDF"]["latencies"]);
+        rtts = fromJsonVector<double>(cdf_json_root["CDF"]["latencies"]);
         auto cdf_percentiles = fromJsonVector<double>(cdf_json_root["CDF"]["percentiles"]);
-        cdf = make_cdf_t(cdf_rtts, num_losses, &cdf_percentiles);
+        cdf = make_cdf_t(rtts, num_losses, &cdf_percentiles);
     }
     auto json_latency_arr = Json::Value(Json::arrayValue);
     auto json_percentile_arr = Json::Value(Json::arrayValue);
@@ -120,6 +92,7 @@ int main(int argc, char **argv) {
         json_latency_arr.append(cdf_point.first);
         json_percentile_arr.append(cdf_point.second);
     }
+    root["num_samples"] = (uint32_t) rtts.size();
     root["CDF"]["latencies"] = json_latency_arr;
     root["CDF"]["percentiles"] = json_percentile_arr;
     if (!qta_path.empty()) {
@@ -133,15 +106,16 @@ int main(int argc, char **argv) {
         root["cdf_qta_overlap"] = cdf_qta_overlap(cdf, qta);
     }
 
-    if(*opt_comments){
+    if (*opt_comments) {
         root["CDF"].setComment(std::string("// Normalized CDF consisting of latency-percentile pairs. When plotting, latency is x and percentile [0, 1] is y."), Json::commentBefore);
         root["cdf_qta_overlap"].setComment(std::string("// The area overlap between the CDF and the provided QTA. >0 if there is an overlap."), Json::commentBefore);
         root["decomposition"]["intercept"].setComment(std::string("// The intercept of the slope found by linear regression through the min value of each packet size."), Json::commentBefore);
         root["decomposition"]["slope"].setComment(std::string("// The slope found by linear regression through the min value of each packet size."), Json::commentBefore);
-        root["decomposition"]["values"].setComment(std::string("//Array of G(eographic)-, S(erialization)-, and V(ariable contention)-delays for each packet size. V is a distribution."), Json::commentBefore);
+        root["decomposition"]["values"].setComment(std::string("//Array of G(eographic)-, S(erialization)-, and V(ariable contention)-delays for each packet size. V is a distribution."),
+                                                   Json::commentBefore);
     }
 
-    //------------------ Output ---------------
+    // ---------------------Output---------------------
     std::stringstream outs;
     Json::StreamWriterBuilder wbuilder;
     wbuilder.settings_["precision"] = precision;
