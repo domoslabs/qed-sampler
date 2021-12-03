@@ -13,11 +13,11 @@ else (${jsoncpp_FOUND})
 endif (${jsoncpp_FOUND})
 
 
-find_library(LIBTDIGEST libtdigest.so)
+find_library(LIBTDIGESTCPP libtdigestcpp.so)
 
 add_executable(qed-sampler src/main.cpp include/qta.h include/io.h include/CLI11.hpp)
 target_link_libraries(qed-sampler ${JSONCPP_LIBRARIES} jsoncpp)
-target_link_libraries(qed-sampler ${LIBTDIGEST})
+target_link_libraries(qed-sampler ${LIBTDIGESTCPP})
 target_include_directories(qed-sampler PUBLIC ${JSONCPP_INCLUDE_DIRS})
 
 install(TARGETS qed-sampler)

@@ -12,7 +12,7 @@
 #include <numeric>
 #include <complex>
 #include <json/json.h>
-#include "tdigest.h"
+#include "libtdigestcpp.h"
 #define MAXLATENCY 15000.0
 struct Sample {
     double rtt = 0;
@@ -52,25 +52,26 @@ std::map<double, double> make_cdf_t(std::vector<double>& rtts, uint32_t num_loss
     for(int i = 0; i < num_losses; i++){
         _rtts.push_back(MAXLATENCY);
     }
-    auto td = td_new(100);
+    auto td = TDigestHistogram(100);
     // Feed the rtts to tdigest.
     for (int i = 0; i < _rtts.size(); ++i) {
         // Make sure that we cap the latency at MAXLATENCY
         double latency = std::min(_rtts.at(i), MAXLATENCY);
-        td_add(td, latency, 1);
+        td.add(latency, 1);
     }
     // Works weird if not calling "compress" implicitly.
-    td_compress(td);
+    td.compress();
     // Add the fewer values to cdf output
-    int td_len = td_centroid_count(td);
+    int td_len = td.getCount();
     double weights = 0;
     for(int i = 0; i < td_len; i++){
-        weights+= td_centroids_weight_at(td, i);
-        auto latency = td_centroids_mean_at(td, i);
+        centroid cent = td.getCentroids().at(i);
+        weights+= cent.weight;
+        auto latency = cent.mean;
         if (percentiles) {
             cdf[latency] = percentiles->at(i);
         } else {
-            cdf[latency] = weights / td_size(td);
+            cdf[latency] = weights / td.getCount();
         }
     }
     return cdf;
