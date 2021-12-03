@@ -71,7 +71,7 @@ std::map<double, double> make_cdf_t(std::vector<double>& rtts, uint32_t num_loss
         if (percentiles) {
             cdf[latency] = percentiles->at(i);
         } else {
-            cdf[latency] = weights / td.getCount();
+            cdf[latency] = weights / td.getTotalWeight();
         }
     }
     return cdf;
