@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     uint16_t port = 443;
     uint16_t precision = 8;
     uint16_t delay = 100;
-    uint16_t localPort = 443;
+    uint16_t localPort = 445;
     uint32_t n = 20;
     std::vector<uint16_t> payloads = std::vector<uint16_t>();
     payloads.push_back(50);
