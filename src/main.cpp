@@ -9,9 +9,12 @@ int main(int argc, char **argv) {
     std::string qta_path, cdf_path;
     uint16_t port = 443;
     uint16_t precision = 8;
-    uint16_t delay = 100;
     uint16_t localPort = 445;
     uint32_t n = 20;
+    std::vector<uint16_t> delays = std::vector<uint16_t>();
+    delays.push_back(100);
+    delays.push_back(150);
+    delays.push_back(200);
     std::vector<uint16_t> payloads = std::vector<uint16_t>();
     payloads.push_back(50);
     payloads.push_back(200);
@@ -28,7 +31,7 @@ int main(int argc, char **argv) {
     auto opt_address = app.add_option("address", address, "IPv4 address of a running TWAMP Server.");
     auto opt_port = app.add_option("-p, --port", port, "The port of the TWAMP Server.");
     auto opt_amount = app.add_option("-n, --amount", n, "Number of samples to collect.");
-    app.add_option("-d, --delay", delay, "Delay between samples (ms)");
+    app.add_option<std::vector<uint16_t>>("-d, --delay", delays, "Delays between samples (ms)")->default_str(vectorToString(delays));
     app.add_option("-P, --local_port", localPort, "Local port to run on.");
     auto opt_payloads = app.add_option<std::vector<uint16_t>>("-l, --payloads", payloads,"Payload size(s) defined in bytes.")->default_str(vectorToString(payloads));
     auto opt_qta = app.add_option("--qta", qta_path,"Calculate the CDF-QTA overlap, requires path to a QTA-file. Expects a JSON with the same \"CDF\"-item as the output of this program.");
@@ -52,7 +55,7 @@ int main(int argc, char **argv) {
         command << "twamp-light-client " << address << " ";
         command << "-n " << n << " ";
         command << "-p " << std::to_string(port) << " ";
-        command << "-d " << std::to_string(delay) << " ";
+        command << "-d " << vectorToString(delays, " ") << " ";
         command << "-P " << std::to_string(localPort) << " ";
         command << "-l " << vectorToString(payloads, " ");
         if (*opt_verbose)
