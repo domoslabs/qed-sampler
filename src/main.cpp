@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
     uint16_t precision = 8;
     uint16_t localPort = 445;
     uint32_t n = 20;
+    uint16_t timeout = 1;
     std::vector<uint16_t> delays = std::vector<uint16_t>();
     delays.push_back(100);
     delays.push_back(150);
@@ -39,6 +40,7 @@ int main(int argc, char **argv) {
     app.add_option("--precision", precision, "Numerical precision in the output.")->check(CLI::Range((uint16_t) 2, (uint16_t) 16));
     auto opt_verbose = app.add_flag("-v, --verbose", "Enable verbose output.");
     auto opt_comments = app.add_flag("--comments", "Enable comments in the json output.");
+    app.add_option("--timeout", timeout, "How long (in seconds) to wait for response before retrying.")
 
     CLI11_PARSE(app, argc, argv);
     if(payloads.size() < 2){
@@ -58,6 +60,7 @@ int main(int argc, char **argv) {
         command << "-d " << vectorToString(delays, " ") << " ";
         command << "-P " << std::to_string(localPort) << " ";
         command << "-l " << vectorToString(payloads, " ");
+        command << "-t " << std::to_string(timeout);
         if (*opt_verbose)
             std::cout << command.str() << std::endl;
         std::string cmd_out = exec(command.str().c_str(), (bool) *opt_verbose);
