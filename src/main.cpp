@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     app.add_option("--precision", precision, "Numerical precision in the output.")->check(CLI::Range((uint16_t) 2, (uint16_t) 16));
     auto opt_verbose = app.add_flag("-v, --verbose", "Enable verbose output.");
     auto opt_comments = app.add_flag("--comments", "Enable comments in the json output.");
-    app.add_option("--timeout", timeout, "How long (in seconds) to wait for response before retrying.")
+    app.add_option("--timeout", timeout, "How long (in seconds) to wait for response before retrying.");
 
     CLI11_PARSE(app, argc, argv);
     if(payloads.size() < 2){
