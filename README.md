@@ -10,6 +10,7 @@ The output is placed in stdout and is json-formatted. Can be redirected to a fil
 
 See `test_cdf.json` and `test_qta.json` for more information about the output.
 ## Building and Installing
+Requires t-digest to be installed: https://github.com/domoslabs/t-digest
 ```shell 
 mkdir build
 cd build
