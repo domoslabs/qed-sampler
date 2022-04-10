@@ -54,13 +54,13 @@ int main(int argc, char **argv) {
     std::map<double, double> cdf;
     if (cdf_path.empty()) {
         std::stringstream command;
-        command << "twamp-light-client " << address << " ";
-        command << "-n " << n << " ";
-        command << "-p " << std::to_string(port) << " ";
-        command << "-d " << vectorToString(delays, " ") << " ";
-        command << "-P " << std::to_string(localPort) << " ";
-        command << "-l " << vectorToString(payloads, " ");
-        command << "-t " << std::to_string(timeout);
+        command << "twamp-light-client " << address;
+        command << " -n " << n;
+        command << " -p " << std::to_string(port);
+        command << " -d " << vectorToString(delays, " ");
+        command << " -P " << std::to_string(localPort);
+        command << " -l " << vectorToString(payloads, " ");
+        command << " -t " << std::to_string(timeout);
         if (*opt_verbose)
             std::cout << command.str() << std::endl;
         std::string cmd_out = exec(command.str().c_str(), (bool) *opt_verbose);
