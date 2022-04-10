@@ -153,7 +153,21 @@ double cdf_qta_overlap(std::map<double, double> cdf, std::map<double, double> qt
     }
     return area;
 }
+// Median https://stackoverflow.com/questions/1719070/what-is-the-right-approach-when-using-stl-container-for-median-calculation/1719155#1719155
+double getMedian(std::vector<double> &v, int q)
+{
+    double n = v.size()*(q/4.0);
+    if(floor(n) == n){
+        int i = n;
+        nth_element(v.begin(), v.begin()+i, v.end());
+        return v[i];
+    } else {
+        int i= floor(n);
+        nth_element(v.begin(), v.begin()+i+1, v.end());
+        return (v[i]+v[i+1])/2;
+    }
 
+}
 /**
  * A fancy map, each vector element is mapped to a payload size defined in payload_sizes.
  */
@@ -174,6 +188,8 @@ struct Distribution {
     double min = 0;
     double max = 0;
     double median = 0;
+    double median_q1 = 0;
+    double median_q3 = 0;
 };
 Distribution getV(AnalysisResult ar, double payload_size, LinearFitResult<double> fr) {
     Distribution V;
@@ -190,17 +206,19 @@ Distribution getV(AnalysisResult ar, double payload_size, LinearFitResult<double
     // St.Dev https://stackoverflow.com/questions/7616511/calculate-mean-and-standard-deviation-from-a-vector-of-samples-in-c-using-boos
     double sq_sum = std::inner_product(residuals.begin(), residuals.end(), residuals.begin(), 0.0);
     double stdev = std::sqrt(sq_sum / (double)residuals.size() - mean * mean);
-    // Median https://stackoverflow.com/questions/1719070/what-is-the-right-approach-when-using-stl-container-for-median-calculation/1719155#1719155
+
     auto _tmp = std::vector<double>(residuals);
-    size_t n = _tmp.size() / 2;
-    nth_element(_tmp.begin(), _tmp.begin()+n, _tmp.end());
-    double median = _tmp[n];
+    double median = getMedian(_tmp, 2);
+    double median_q1 = getMedian(_tmp, 1);
+    double median_q3 = getMedian(_tmp, 3);
 
     V.max = ar.maxDelays.at(index)-slopeHeight;
     V.min = ar.minDelays.at(index)-slopeHeight;
     V.mean = mean;
     V.stdev = stdev;
     V.median = median;
+    V.median_q1 = median_q1;
+    V.median_q3 = median_q3;
     return V;
 }
 double getS(double payload_size, double G, LinearFitResult<double> fr) {
@@ -278,12 +296,19 @@ void performDecomposition(const std::vector<Sample>& samples, const std::vector<
         Distribution V = getV(ar, payload_size, fr);
         double S = getS(payload_size, G, fr);
         root["decomposition"]["values"][position]["payload_size"] = payload_size;
+
         root["decomposition"]["values"][position]["G"] = G;
+
         root["decomposition"]["values"][position]["V"]["mean"] = V.mean;
         root["decomposition"]["values"][position]["V"]["std"] = V.stdev;
+
         root["decomposition"]["values"][position]["V"]["median"] = V.median;
+        root["decomposition"]["values"][position]["V"]["median_q1"] = V.median_q1;
+        root["decomposition"]["values"][position]["V"]["median_q3"] = V.median_q3;
+
         root["decomposition"]["values"][position]["V"]["min"] = V.min;
         root["decomposition"]["values"][position]["V"]["max"] = V.max;
+
         root["decomposition"]["values"][position]["S"] = S;
         position++;
     }
