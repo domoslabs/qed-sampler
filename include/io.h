@@ -31,7 +31,7 @@ T string_to_number(const std::string &str) {
 }
 
 template<class T>
-std::vector<T> read_csv_column(std::stringstream data, int col_idx, bool skip_header = true) {
+std::vector<T> read_csv_column(std::stringstream data, int col_idx, bool skip_header = true, char delim = ',') {
     std::vector<T> result;
     std::string line;
 
@@ -43,17 +43,36 @@ std::vector<T> read_csv_column(std::stringstream data, int col_idx, bool skip_he
         int count = 0;
         while (iss.good()) {
             std::string substr;
-            getline(iss, substr, ',');
+            getline(iss, substr, delim);
             if (count == col_idx) {
                 result.push_back(string_to_number<T>(substr));
             }
             count++;
         }
     }
-
     return result;
 }
+std::vector<std::string> read_csv_column(std::stringstream data, int col_idx, bool skip_header = true, char delim = ',') {
+    std::vector<std::string> result;
+    std::string line;
 
+    if (skip_header)
+        std::getline(data, line); // Skip first line
+    while (std::getline(data, line)) {
+        std::istringstream iss(line);
+
+        int count = 0;
+        while (iss.good()) {
+            std::string substr;
+            getline(iss, substr, delim);
+            if (count == col_idx) {
+                result.push_back(substr);
+            }
+            count++;
+        }
+    }
+    return result;
+}
 template<class T>
 std::vector<T> fromJsonVector(const Json::Value &jsonVector) {
     std::vector<T> out;

@@ -20,6 +20,7 @@ struct Sample {
     double fwd = 0;
     double swd = 0;
     double plen = 0;
+    bool sync = false;
 };
 std::map<double, double> make_cdf(std::vector<double>& rtts, uint32_t num_losses, std::vector<double> *percentiles = nullptr) {
     // Make a copy so that we can modify the array without messing up somewhere else

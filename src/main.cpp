@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
     uint16_t localPort = 445;
     uint32_t n = 20;
     uint16_t timeout = 1;
+    bool owd = false;
     std::vector<uint16_t> delays = std::vector<uint16_t>();
     delays.push_back(100);
     delays.push_back(150);
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
     auto opt_verbose = app.add_flag("-v, --verbose", "Enable verbose output.");
     auto opt_comments = app.add_flag("--comments", "Enable comments in the json output.");
     app.add_option("--timeout", timeout, "How long (in seconds) to wait for response before retrying.");
-
+    app.add_flag("--owd", owd, "Use the one way delay (client to server delay) instead of rtt.");
     CLI11_PARSE(app, argc, argv);
     if(payloads.size() < 2){
         std::cerr << "Must provide at least 2 payload sizes." << std::endl;
@@ -64,18 +65,25 @@ int main(int argc, char **argv) {
         if (*opt_verbose)
             std::cout << command.str() << std::endl;
         std::string cmd_out = exec(command.str().c_str(), (bool) *opt_verbose);
-        rtts = read_csv_column<double>(std::stringstream(cmd_out), 12);
-        auto intds = read_csv_column<double>(std::stringstream(cmd_out), 13);
-        auto fwds = read_csv_column<double>(std::stringstream(cmd_out), 14);
-        auto swds = read_csv_column<double>(std::stringstream(cmd_out), 15);
-        auto plens = read_csv_column<double>(std::stringstream(cmd_out), 16);
+        rtts = read_csv_column<double>(std::stringstream(cmd_out), 12, true, '|');
+        auto intds = read_csv_column<double>(std::stringstream(cmd_out), 13, true, '|');
+        auto fwds = read_csv_column<double>(std::stringstream(cmd_out), 14, true, '|');
+        auto swds = read_csv_column<double>(std::stringstream(cmd_out), 15, true, '|');
+        auto plens = read_csv_column<double>(std::stringstream(cmd_out), 16, true, '|');
+        auto syncs = read_csv_column(std::stringstream(cmd_out), 6, true, '|');
         // We only look at the last line of the losses column
-        num_losses = read_csv_column<uint32_t>(std::stringstream(cmd_out), 17).back();
+        num_losses = read_csv_column<uint32_t>(std::stringstream(cmd_out), 17, true, '|').back();
         root["loss_pct"] = (double) num_losses / (double) rtts.size();
         std::vector<Sample> samples = std::vector<Sample>();
         for (int i = 0; i < rtts.size(); i++) {
             Sample sample;
+            sample.sync = syncs.at(i) == "Y";
+            if(!sample.sync && owd)
+                continue;
             sample.rtt = rtts.at(i);
+            if(owd){
+                sample.rtt = fwds.at(i);
+            }
             sample.intd = intds.at(i);
             sample.fwd = fwds.at(i);
             sample.swd = swds.at(i);
